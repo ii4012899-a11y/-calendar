@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Производственный календарь</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --text: #1a1a1a;
+  --border: #d1d5db;
+  --border-light: #e5e7eb;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --secondary: #6b7280;
+  --error: #dc2626;
+  --today-bg: #fef3c7;
+  --today-border: #f59e0b;
+  --weekend-text: #dc2626;
+  --holiday-bg: #fee2e2;
+  --range-bg: #dbeafe;
+  --range-start-bg: #93c5fd;
+  --range-end-bg: #93c5fd;
+  --warning-bg: #fef3c7;
+  --warning-border: #f59e0b;
+  --card-bg: #f9fafb;
+  --shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+[data-theme="dark"] {
+  --bg: #0f172a;
+  --text: #e5e7eb;
+  --border: #334155;
+  --border-light: #1e293b;
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --secondary: #94a3b8;
+  --error: #ef4444;
+  --today-bg: #78350f;
+  --today-border: #f59e0b;
+  --weekend-text: #f87171;
+  --holiday-bg: #7f1d1d;
+  --range-bg: #1e3a8a;
+  --range-start-bg: #1d4ed8;
+  --range-end-bg: #1d4ed8;
+  --warning-bg: #78350f;
+  --warning-border: #f59e0b;
+  --card-bg: #1e293b;
+  --shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.2s, color 0.2s;
+  font-size: 14px;
+}
+
+/* Header */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-light);
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 100;
+}
+h1 { font-size: 16px; margin: 0; font-weight: 600; white-space: nowrap; }
+.header-controls { display: flex; gap: 6px; align-items: center; }
+.btn-icon {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 4px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.15s;
+  line-height: 1;
+}
+.btn-icon:hover { background: var(--card-bg); }
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-light);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.field-label {
+  font-size: 9px;
+  color: var(--secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  font-weight: 600;
+}
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.toolbar input[type="date"],
+.toolbar input[type="number"] {
+  padding: 4px 7px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  height: 28px;
+}
+.toolbar input[type="date"] { width: 132px; }
+.toolbar input[type="number"] { width: 64px; }
+.toolbar input.error { border-color: var(--error); box-shadow: 0 0 0 2px rgba(220,38,38,0.15); }
+
+/* Rocker switch */
+.rocker {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--card-bg);
+  flex-shrink: 0;
+  height: 28px;
+}
+.rocker button {
+  padding: 0 6px;
+  border: none;
+  background: transparent;
+  color: var(--secondary);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  line-height: 28px;
+  min-width: 22px;
+}
+.rocker button.active {
+  background: var(--primary);
+  color: white;
+}
+.rocker button:hover:not(.active) {
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--primary);
+}
+
+button.primary {
+  padding: 6px 16px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  height: 28px;
+}
+button.primary:hover { background: var(--primary-hover); }
+button.secondary {
+  padding: 6px 14px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 13px;
+  cursor: pointer;
+  height: 28px;
+  font-family: inherit;
+}
+button.secondary:hover { background: var(--card-bg); }
+
+/* Calendar controls (year + warning) */
+.calendar-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px 0;
+  max-width: 1500px;
+  margin: 0 auto;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.year-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.year-selector label {
+  font-size: 12px;
+  color: var(--secondary);
+  font-weight: 500;
+}
+.year-selector select {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.warning {
+  padding: 6px 12px;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  border-radius: 5px;
+  font-size: 12px;
+  flex: 1;
+  min-width: 260px;
+  text-align: center;
+}
+.warning.hidden { display: none; }
+
+/* Calendar */
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  padding: 12px 16px 16px;
+  max-width: 1500px;
+  margin: 0 auto;
+}
+@media (max-width: 1280px) {
+  .calendar { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 860px) {
+  .calendar { grid-template-columns: repeat(2, 1fr); gap: 6px; padding: 8px; }
+}
+@media (max-width: 480px) {
+  .calendar { gap: 4px; padding: 6px; }
+  header { padding: 6px 10px; }
+  h1 { font-size: 13px; }
+  .btn-icon { padding: 3px 6px; font-size: 12px; }
+  .toolbar { padding: 6px 8px; gap: 6px; }
+  .field-label { font-size: 8px; }
+  .toolbar input[type="date"] { width: 110px; font-size: 11px; padding: 3px 5px; }
+  .toolbar input[type="number"] { width: 52px; font-size: 12px; padding: 3px 5px; }
+  .rocker button { font-size: 9px; padding: 0 4px; min-width: 18px; }
+  .rocker, .toolbar input[type="date"], .toolbar input[type="number"], button.secondary { height: 24px; line-height: 24px; }
+  .rocker button { line-height: 24px; }
+  button.secondary { padding: 4px 10px; font-size: 11px; }
+  .month-title { font-size: 11px; margin-bottom: 3px; }
+  .month { padding: 5px; }
+  .month-grid { font-size: 10px; gap: 1px; }
+  .day-cell { padding: 2px 0; font-size: 10px; }
+  .weekday-header { font-size: 8px; padding: 1px 0; }
+  .year-selector select { font-size: 13px; padding: 3px 8px; }
+  .warning { font-size: 11px; padding: 4px 8px; }
+  .result-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+}
+.month {
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  padding: 8px;
+}
+.month-title {
+  text-align: center;
+  font-weight: 600;
+  font-size: 12px;
+  margin-bottom: 5px;
+  color: var(--primary);
+}
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  font-size: 12px;
+}
+.month-grid.with-weeks { grid-template-columns: 18px repeat(7, 1fr); }
+.weekday-header {
+  text-align: center;
+  font-weight: 600;
+  font-size: 9px;
+  color: var(--secondary);
+  padding: 2px 0;
+}
+.week-number {
+  text-align: center;
+  font-size: 8px;
+  color: var(--secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+}
+.day-cell {
+  padding: 3px 0;
+  text-align: center;
+  border-radius: 3px;
+  min-width: 0;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.1s;
+  position: relative;
+}
+.day-cell.empty { visibility: hidden; cursor: default; }
+.day-cell:hover:not(.empty) { background: rgba(37, 99, 235, 0.1); }
+.day-cell.non-working { color: var(--weekend-text); }
+.day-cell.holiday { background: var(--holiday-bg); }
+.day-cell.in-range { background: var(--range-bg); border-radius: 0; }
+.day-cell.range-start { background: var(--range-start-bg); border-radius: 3px 0 0 3px; }
+.day-cell.range-end { background: var(--range-end-bg); border-radius: 0 3px 3px 0; }
+.day-cell.range-start.range-end { border-radius: 3px; }
+.day-cell.today {
+  background: var(--today-bg);
+  box-shadow: inset 0 0 0 2px var(--today-border);
+  font-weight: 700;
+}
+.day-cell.today.in-range { box-shadow: inset 0 0 0 2px var(--today-border); }
+
+/* Results */
+.results {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 0 16px 20px;
+}
+.result-section {
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.result-title { font-weight: 600; margin-bottom: 8px; color: var(--primary); font-size: 14px; }
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 6px;
+}
+.result-grid > div {
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: 5px;
+  padding: 8px 10px;
+  text-align: center;
+}
+.result-grid .num { display: block; font-size: 20px; font-weight: 700; color: var(--primary); }
+.result-grid .lbl { display: block; font-size: 11px; color: var(--secondary); margin-top: 2px; }
+.result-section.secret {
+  border-color: var(--warning-border);
+  background: var(--warning-bg);
+}
+.result-section.secret .secret-line { padding: 3px 0; }
+.result-section.secret .secret-line strong { color: var(--text); }
+
+/* Panels */
+.settings-panel, .help-panel {
+  position: fixed;
+  top: 52px;
+  right: 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+  z-index: 200;
+  max-width: 400px;
+}
+.settings-panel.hidden, .help-panel.hidden { display: none; }
+.help-panel { max-width: 520px; max-height: 80vh; overflow-y: auto; }
+.help-panel h3 { margin: 0 0 8px; font-size: 15px; }
+.help-panel h4 { margin: 12px 0 4px; font-size: 13px; }
+.help-panel p, .help-panel li { font-size: 12.5px; line-height: 1.5; margin: 4px 0; }
+.help-panel ul { padding-left: 18px; margin: 4px 0; }
+.settings-panel label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  z-index: 150;
+  display: none;
+}
+.overlay.visible { display: block; }
+kbd {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 11px;
+  font-family: monospace;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Производственный календарь</h1>
+  <div class="header-controls">
+    <button class="btn-icon" id="helpBtn" title="Справка">?</button>
+    <button class="btn-icon" id="settingsBtn" title="Настройки">⚙️</button>
+    <button class="btn-icon" id="themeBtn" title="Тема">🌙</button>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="field-group">
+    <span class="field-label">Начало</span>
+    <div class="field-row">
+      <div class="rocker" id="startModeRocker">
+        <button data-val="inclusive" class="active" title="Включительно: сама дата входит в интервал">Вкл.</button>
+        <button data-val="exclusive" title="Со следующего: сама дата не входит в интервал">Искл.</button>
+      </div>
+      <input type="date" id="startDate">
+    </div>
+  </div>
+
+  <div class="field-group">
+    <span class="field-label">Интервал</span>
+    <div class="field-row">
+      <div class="rocker" id="intervalModeRocker">
+        <button data-val="work" title="Рабочие дни">Р</button>
+        <button data-val="calendar" class="active" title="Календарные дни">К</button>
+      </div>
+      <input type="number" id="interval" min="1" placeholder="—">
+    </div>
+  </div>
+
+  <div class="field-group">
+    <span class="field-label">Конец</span>
+    <div class="field-row">
+      <div class="rocker" id="endModeRocker">
+        <button data-val="inclusive" class="active" title="Включительно: сама дата входит в интервал">Вкл.</button>
+        <button data-val="exclusive" title="Со следующего: сама дата не входит в интервал">Искл.</button>
+      </div>
+      <input type="date" id="endDate">
+    </div>
+  </div>
+
+  <button class="secondary" id="resetBtn">Сбросить</button>
+</div>
+
+<div class="calendar-controls">
+  <div class="year-selector">
+    <label for="yearSelect">Год:</label>
+    <select id="yearSelect"></select>
+  </div>
+  <div class="warning hidden" id="warning"></div>
+</div>
+
+<div class="calendar" id="calendar"></div>
+
+<div class="results" id="results"></div>
+
+<div class="settings-panel hidden" id="settingsPanel">
+  <label><input type="checkbox" id="showWeeks"> Показывать номера недель</label>
+</div>
+
+<div class="help-panel hidden" id="helpPanel">
+  <h3>Инструкция</h3>
+
+  <h4>Три поля</h4>
+  <p>Слева направо: <b>дата начала</b>, <b>интервал</b>, <b>дата окончания</b>. Заполните любые два поля — третье рассчитается автоматически. Никаких кнопок «Рассчитать» нажимать не нужно.</p>
+
+  <h4>Переключатели (rocker)</h4>
+  <ul>
+    <li><b>Вкл.</b> — дата <u>включительно</u>: сама дата входит в подсчитываемый интервал.</li>
+    <li><b>Искл.</b> — дата <u>исключается</u>: подсчёт начинается со следующего дня (для начала) или заканчивается предыдущим днём (для конца).</li>
+    <li><b>Р</b> — интервал в <u>рабочих</u> днях (пн–пт, а также рабочие субботы из официального календаря).</li>
+    <li><b>К</b> — интервал в <u>календарных</u> днях (все дни подряд).</li>
+  </ul>
+  <p><i>Пример:</i> «Вкл. / 10 / К» от 01.01 — конец будет 10.01. «Искл. / 10 / К» от 01.01 — начало сдвигается на 02.01, конец 11.01.</p>
+
+  <h4>Выбор дат мышью в календаре</h4>
+  <ul>
+    <li><b>1-й клик</b> — устанавливает дату начала (интервал и конец сбрасываются).</li>
+    <li><b>2-й клик</b> — устанавливает дату окончания (интервал пересчитывается).</li>
+    <li><b>Клик по той же дате</b> (что и начало) — снимает начало, можно выбрать другую.</li>
+    <li><b>3-й клик</b> (после готового диапазона) — начинает новый диапазон.</li>
+    <li>Если второй клик раньше первого — даты меняются местами.</li>
+    <li>При переключении года выделение сохраняется — можно задать начало в одном году, конец в другом.</li>
+  </ul>
+
+  <h4>Совмещение мыши и клавиатуры</h4>
+  <p>Можно кликнуть начало в календаре, ввести интервал вручную — конец подставится сам. Или наоборот: ввести начало и конец — интервал посчитается. Любое действие сразу обновляет календарь и результаты.</p>
+
+  <h4>Секретный функционал</h4>
+  <p>Если рассчитанный период выходит за пределы официальных календарей (2020–2030), дополнительно отображаются:</p>
+  <ul>
+    <li>количество полных лет, месяцев и дней;</li>
+    <li>то же в месяцах и днях;</li>
+    <li>общее количество дней с даты начала включительно.</li>
+  </ul>
+
+  <h4>Календарь</h4>
+  <ul>
+    <li>Текущий день отмечен <b>квадратной рамкой</b>.</li>
+    <li>Рабочие субботы (по официальному календарю) считаются рабочими днями.</li>
+    <li>Праздничные будни подсвечены розовым фоном.</li>
+    <li>Для <b>2028–2030</b> официальный календарь ещё не утверждён — применяется стандартная пятидневка с предупреждением.</li>
+    <li>Номера недель включаются в ⚙️ (по умолчанию скрыты).</li>
+  </ul>
+
+  <h4>Кнопка «Сбросить»</h4>
+  <p>Очищает интервал и конец, ставит начало = сегодня, снимает выделение.</p>
+</div>
+
+<div class="overlay" id="overlay"></div>
+
+<script>
+const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const WEEKDAY_NAMES = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+
+const CALENDARS = {
+  2020: { extraOff: ['2020-01-01','2020-01-02','2020-01-03','2020-01-06','2020-01-07','2020-01-08','2020-02-24','2020-03-09','2020-05-01','2020-05-04','2020-05-05','2020-05-11','2020-06-12','2020-06-24','2020-07-01','2020-11-04'], workingWeekends: [] },
+  2021: { extraOff: ['2021-01-01','2021-01-04','2021-01-05','2021-01-06','2021-01-07','2021-01-08','2021-02-22','2021-02-23','2021-03-08','2021-05-03','2021-05-10','2021-06-14','2021-11-04','2021-11-05'], workingWeekends: ['2021-02-20'] },
+  2022: { extraOff: ['2022-01-03','2022-01-04','2022-01-05','2022-01-06','2022-01-07','2022-02-23','2022-03-07','2022-03-08','2022-05-02','2022-05-03','2022-05-09','2022-05-10','2022-06-13','2022-11-04'], workingWeekends: ['2022-03-05'] },
+  2023: { extraOff: ['2023-01-02','2023-01-03','2023-01-04','2023-01-05','2023-01-06','2023-02-23','2023-02-24','2023-03-08','2023-05-01','2023-05-08','2023-05-09','2023-06-12','2023-11-06'], workingWeekends: [] },
+  2024: { extraOff: ['2024-01-01','2024-01-02','2024-01-03','2024-01-04','2024-01-05','2024-01-08','2024-02-23','2024-03-08','2024-04-29','2024-04-30','2024-05-01','2024-05-09','2024-05-10','2024-06-12','2024-11-04','2024-12-30','2024-12-31'], workingWeekends: ['2024-04-27','2024-11-02','2024-12-28'] },
+  2025: { extraOff: ['2025-01-01','2025-01-02','2025-01-03','2025-01-06','2025-01-07','2025-01-08','2025-02-24','2025-03-10','2025-05-01','2025-05-02','2025-05-08','2025-05-09','2025-06-12','2025-06-13','2025-11-03','2025-11-04','2025-12-31'], workingWeekends: ['2025-11-01'] },
+  2026: { extraOff: ['2026-01-01','2026-01-02','2026-01-05','2026-01-06','2026-01-07','2026-01-08','2026-01-09','2026-02-23','2026-03-09','2026-05-01','2026-05-11','2026-06-12','2026-11-04','2026-12-31'], workingWeekends: [] },
+  2027: { extraOff: ['2027-01-01','2027-01-04','2027-01-05','2027-01-06','2027-01-07','2027-01-08','2027-02-23','2027-03-08','2027-05-03','2027-05-10','2027-06-14','2027-11-04'], workingWeekends: [] }
+};
+
+let currentYear = new Date().getFullYear();
+if (currentYear < 2020) currentYear = 2020;
+if (currentYear > 2030) currentYear = 2030;
+
+let showWeekNumbers = false;
+let clickState = 'awaiting_start';
+const todayStr = toStr(new Date());
+
+function toDate(str) { const [y,m,d] = str.split('-').map(Number); return new Date(Date.UTC(y, m-1, d)); }
+function toStr(date) { return date.toISOString().slice(0,10); }
+function addDays(date, n) { return new Date(date.getTime() + n*86400000); }
+function addDaysStr(str, n) { return toStr(addDays(toDate(str), n)); }
+function isWeekend(dateStr) { const d = toDate(dateStr); const dow = d.getUTCDay(); return dow === 0 || dow === 6; }
+function isWorkingDay(dateStr) {
+  const year = parseInt(dateStr.slice(0,4));
+  const cal = CALENDARS[year];
+  if (!cal) return !isWeekend(dateStr);
+  if (cal.workingWeekends.includes(dateStr)) return true;
+  if (cal.extraOff.includes(dateStr)) return false;
+  return !isWeekend(dateStr);
+}
+function isHolidayWeekday(dateStr) {
+  const year = parseInt(dateStr.slice(0,4));
+  const cal = CALENDARS[year];
+  if (!cal) return false;
+  return cal.extraOff.includes(dateStr) && !isWeekend(dateStr);
+}
+function getISOWeek(date) {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+function formatDate(str) { if (!str) return ''; const [y,m,d] = str.split('-'); return `${d}.${m}.${y}`; }
+
+function countCalendarDays(startStr, endStr) { if (startStr > endStr) return 0; return Math.round((toDate(endStr) - toDate(startStr)) / 86400000) + 1; }
+function countWorkingDays(startStr, endStr) {
+  if (startStr > endStr) return 0;
+  let count = 0, cur = toDate(startStr); const end = toDate(endStr);
+  while (cur <= end) { if (isWorkingDay(toStr(cur))) count++; cur = addDays(cur, 1); }
+  return count;
+}
+function addWorkingDays(startStr, n) {
+  let cur = toDate(startStr);
+  let count = 0;
+  while (true) {
+    if (isWorkingDay(toStr(cur))) {
+      if (count === n) return toStr(cur);
+      count++;
+    }
+    cur = addDays(cur, 1);
+  }
+}
+function subtractWorkingDays(endStr, n) {
+  let cur = toDate(endStr);
+  let count = 0;
+  while (true) {
+    if (isWorkingDay(toStr(cur))) {
+      if (count === n) return toStr(cur);
+      count++;
+    }
+    cur = addDays(cur, -1);
+  }
+}
+
+function getRockerValue(id) {
+  const btn = document.getElementById(id).querySelector('button.active');
+  return btn ? btn.dataset.val : null;
+}
+function getStartMode() { return getRockerValue('startModeRocker'); }
+function getIntervalMode() { return getRockerValue('intervalModeRocker'); }
+function getEndMode() { return getRockerValue('endModeRocker'); }
+
+function getEffectiveStart() {
+  const s = document.getElementById('startDate').value;
+  if (!s) return null;
+  return getStartMode() === 'exclusive' ? addDaysStr(s, 1) : s;
+}
+function getEffectiveEnd() {
+  const e = document.getElementById('endDate').value;
+  if (!e) return null;
+  return getEndMode() === 'exclusive' ? addDaysStr(e, -1) : e;
+}
+
+function calcIntervalFromDates(startStr, endStr) {
+  const s = getEffectiveStart();
+  const e = getEffectiveEnd();
+  if (!s || !e || s > e) return 0;
+  return getIntervalMode() === 'work' ? countWorkingDays(s, e) : countCalendarDays(s, e);
+}
+function calcEndFromStart(startStr, interval) {
+  const s = getEffectiveStart();
+  if (!s || interval <= 0) return '';
+  let rawEnd;
+  if (getIntervalMode() === 'work') rawEnd = addWorkingDays(s, interval - 1);
+  else rawEnd = addDaysStr(s, interval - 1);
+  return getEndMode() === 'exclusive' ? addDaysStr(rawEnd, 1) : rawEnd;
+}
+function calcStartFromEnd(endStr, interval) {
+  const e = getEffectiveEnd();
+  if (!e || interval <= 0) return '';
+  let rawStart;
+  if (getIntervalMode() === 'work') rawStart = subtractWorkingDays(e, interval - 1);
+  else rawStart = addDaysStr(e, -(interval - 1));
+  return getStartMode() === 'exclusive' ? addDaysStr(rawStart, -1) : rawStart;
+}
+
+function dateDiff(d1, d2) {
+  const start = toDate(d1), end = toDate(d2);
+  let years = end.getUTCFullYear() - start.getUTCFullYear();
+  let months = end.getUTCMonth() - start.getUTCMonth();
+  let days = end.getUTCDate() - start.getUTCDate();
+  if (days < 0) { months--; const prevMonthEnd = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 0)); days += prevMonthEnd.getUTCDate(); }
+  if (months < 0) { years--; months += 12; }
+  const totalDays = Math.round((end - start) / 86400000) + 1;
+  return { years, months, days, totalDays };
+}
+
+// -------- INIT --------
+function init() {
+  const sel = document.getElementById('yearSelect');
+  for (let y = 2020; y <= 2030; y++) {
+    const opt = document.createElement('option');
+    opt.value = y; opt.textContent = y;
+    if (y === currentYear) opt.selected = true;
+    sel.appendChild(opt);
+  }
+
+  document.getElementById('startDate').value = todayStr;
+  setTheme(localStorage.getItem('theme') || 'light');
+  clickState = 'awaiting_start';
+
+  // Rockers
+  ['startModeRocker','intervalModeRocker','endModeRocker'].forEach(id => {
+    document.getElementById(id).addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      document.getElementById(id).querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      recalcDynamic('mode');
+      refresh();
+    });
+  });
+
+  // Inputs
+  const startEl = document.getElementById('startDate');
+  const intervalEl = document.getElementById('interval');
+  const endEl = document.getElementById('endDate');
+  let debounceTimer;
+  function debounced(field) {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => { recalcDynamic(field); refresh(); }, 120);
+  }
+  startEl.addEventListener('input', () => debounced('start'));
+  endEl.addEventListener('input', () => debounced('end'));
+  intervalEl.addEventListener('input', () => debounced('interval'));
+  [startEl, endEl, intervalEl].forEach(el => el.addEventListener('change', () => { recalcDynamic(el.id); refresh(); }));
+
+  document.getElementById('resetBtn').addEventListener('click', reset);
+  document.getElementById('themeBtn').addEventListener('click', toggleTheme);
+  document.getElementById('settingsBtn').addEventListener('click', () => togglePanel('settingsPanel'));
+  document.getElementById('helpBtn').addEventListener('click', () => togglePanel('helpPanel'));
+  document.getElementById('overlay').addEventListener('click', closePanels);
+  document.getElementById('showWeeks').addEventListener('change', (e) => { showWeekNumbers = e.target.checked; renderCalendar(currentYear); });
+  sel.addEventListener('change', (e) => { currentYear = parseInt(e.target.value); updateWarning(); renderCalendar(currentYear); });
+
+  refresh();
+  updateWarning();
+}
+
+// -------- DYNAMIC RECALC --------
+// Правило:
+// - правим дату начала: если есть конец -> пересчёт интервала; иначе если есть интервал -> пересчёт конца
+// - правим интервал: если есть начало -> пересчёт конца; иначе если есть конец -> пересчёт начала
+// - правим дату конца: если есть начало -> пересчёт интервала; иначе если есть интервал -> пересчёт начала
+// - меняем rocker: пересчитываем «производное» поле по приоритету (интервал/конец)
+function recalcDynamic(field) {
+  const startEl = document.getElementById('startDate');
+  const intervalEl = document.getElementById('interval');
+  const endEl = document.getElementById('endDate');
+  const start = startEl.value;
+  const interval = parseInt(intervalEl.value) || 0;
+  const end = endEl.value;
+
+  // Cleanup red highlights
+  [startEl, endEl, intervalEl].forEach(el => el.classList.remove('error'));
+
+  if (field === 'start') {
+    if (start && end) {
+      intervalEl.value = calcIntervalFromDates(start, end) || '';
+    } else if (start && interval > 0) {
+      endEl.value = calcEndFromStart(start, interval);
+    }
+  } else if (field === 'interval') {
+    if (interval > 0 && start) {
+      endEl.value = calcEndFromStart(start, interval);
+    } else if (interval > 0 && end) {
+      startEl.value = calcStartFromEnd(end, interval);
+    }
+  } else if (field === 'end') {
+    if (start && end) {
+      intervalEl.value = calcIntervalFromDates(start, end) || '';
+    } else if (end && interval > 0) {
+      startEl.value = calcStartFromEnd(end, interval);
+    }
+  } else if (field === 'mode') {
+    // Роскер поменяли — пересчитываем
+    if (start && interval > 0) {
+      endEl.value = calcEndFromStart(start, interval);
+    } else if (start && end) {
+      intervalEl.value = calcIntervalFromDates(start, end) || '';
+    } else if (end && interval > 0) {
+      startEl.value = calcStartFromEnd(end, interval);
+    }
+  }
+}
+
+// -------- CALENDAR CLICK --------
+function onCalendarClick(dateStr) {
+  const startEl = document.getElementById('startDate');
+  const intervalEl = document.getElementById('interval');
+  const endEl = document.getElementById('endDate');
+
+  if (clickState === 'awaiting_start') {
+    startEl.value = dateStr;
+    intervalEl.value = '';
+    endEl.value = '';
+    clickState = 'awaiting_end';
+  } else {
+    // awaiting_end
+    if (dateStr === startEl.value) {
+      // toggle off start
+      startEl.value = '';
+      clickState = 'awaiting_start';
+    } else {
+      let s = startEl.value || dateStr;
+      let e = dateStr;
+      if (!s || e < s) [s, e] = [e, s];
+      startEl.value = s;
+      endEl.value = e;
+      intervalEl.value = calcIntervalFromDates(s, e) || '';
+      clickState = 'awaiting_start';
+    }
+  }
+  refresh();
+}
+
+// -------- RESET --------
+function reset() {
+  const startEl = document.getElementById('startDate');
+  const intervalEl = document.getElementById('interval');
+  const endEl = document.getElementById('endDate');
+  startEl.value = todayStr;
+  intervalEl.value = '';
+  endEl.value = '';
+  [startEl, endEl, intervalEl].forEach(el => el.classList.remove('error'));
+  clickState = 'awaiting_start';
+  document.getElementById('startModeRocker').querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.val === 'inclusive'));
+  document.getElementById('intervalModeRocker').querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.val === 'calendar'));
+  document.getElementById('endModeRocker').querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.val === 'inclusive'));
+  refresh();
+}
+
+// -------- REFRESH (render + results) --------
+function refresh() {
+  renderCalendar(currentYear);
+  showResults();
+}
+
+// -------- RESULTS --------
+function showResults() {
+  const results = document.getElementById('results');
+  const s = document.getElementById('startDate').value;
+  const e = document.getElementById('endDate').value;
+
+  if (!s && !e) {
+    results.innerHTML = '<div class="result-section">Выберите даты в календаре или введите в поля выше.</div>';
+    return;
+  }
+
+  let html = '';
+
+  if (s && e) {
+    const effS = getEffectiveStart();
+    const effE = getEffectiveEnd();
+    let calDays = 0, workDays = 0, calExcl = 0, workExcl = 0;
+    if (effS && effE && effS <= effE) {
+      calDays = countCalendarDays(effS, effE);
+      workDays = countWorkingDays(effS, effE);
+      if (effS < effE) {
+        calExcl = countCalendarDays(addDaysStr(effS, 1), addDaysStr(effE, -1));
+        workExcl = countWorkingDays(addDaysStr(effS, 1), addDaysStr(effE, -1));
+      }
+    }
+
+    html += '<div class="result-section">';
+    html += `<div class="result-title">Период: ${formatDate(s)} — ${formatDate(e)}</div>`;
+    html += '<div class="result-grid">';
+    html += `<div><span class="num">${calDays}</span><span class="lbl">календарных дней</span></div>`;
+    html += `<div><span class="num">${workDays}</span><span class="lbl">рабочих дней</span></div>`;
+    html += `<div><span class="num">${calExcl}</span><span class="lbl">кал. без крайних</span></div>`;
+    html += `<div><span class="num">${workExcl}</span><span class="lbl">раб. без крайних</span></div>`;
+    html += '</div>';
+    html += '</div>';
+
+    if (s < '2020-01-01' || e > '2030-12-31') {
+      const diff = dateDiff(s, e);
+      const totalMonths = diff.years * 12 + diff.months;
+      html += '<div class="result-section secret">';
+      html += `<div class="result-title">⚠️ Период вне официальных календарей (2020–2030)</div>`;
+      html += `<div class="secret-line">Полных: <strong>${diff.years} лет, ${diff.months} месяцев и ${diff.days} дней</strong></div>`;
+      html += `<div class="secret-line">В месяцах: <strong>${totalMonths} месяцев и ${diff.days} дней</strong></div>`;
+      html += `<div class="secret-line">Всего дней с начала включительно: <strong>${diff.totalDays}</strong></div>`;
+      html += '</div>';
+    }
+  } else if (s) {
+    html += `<div class="result-section">Начало: <b>${formatDate(s)}</b>. Кликните по календарю или задайте интервал.</div>`;
+  } else if (e) {
+    html += `<div class="result-section">Конец: <b>${formatDate(e)}</b>. Кликните по календарю или задайте интервал.</div>`;
+  }
+
+  results.innerHTML = html;
+}
+
+// -------- THEME & PANELS --------
+function setTheme(theme) {
+  if (theme === 'dark') { document.body.setAttribute('data-theme', 'dark'); document.getElementById('themeBtn').textContent = '☀️'; }
+  else { document.body.removeAttribute('data-theme'); document.getElementById('themeBtn').textContent = '🌙'; }
+  localStorage.setItem('theme', theme);
+}
+function toggleTheme() {
+  const cur = document.body.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  setTheme(cur === 'dark' ? 'light' : 'dark');
+}
+function togglePanel(id) {
+  const panel = document.getElementById(id);
+  const overlay = document.getElementById('overlay');
+  const isHidden = panel.classList.contains('hidden');
+  document.getElementById('settingsPanel').classList.add('hidden');
+  document.getElementById('helpPanel').classList.add('hidden');
+  if (isHidden) { panel.classList.remove('hidden'); overlay.classList.add('visible'); }
+  else { overlay.classList.remove('visible'); }
+}
+function closePanels() {
+  document.getElementById('settingsPanel').classList.add('hidden');
+  document.getElementById('helpPanel').classList.add('hidden');
+  document.getElementById('overlay').classList.remove('visible');
+}
+function updateWarning() {
+  const w = document.getElementById('warning');
+  if (currentYear >= 2028) {
+    w.textContent = '⚠️ Производственный календарь на этот год не утверждён. Показана стандартная пятидневка (выходные — сб, вс).';
+    w.classList.remove('hidden');
+  } else { w.classList.add('hidden'); }
+}
+
+// -------- RENDER CALENDAR --------
+function renderCalendar(year) {
+  const container = document.getElementById('calendar');
+  container.innerHTML = '';
+  const effS = getEffectiveStart();
+  const effE = getEffectiveEnd();
+
+  for (let month = 0; month < 12; month++) {
+    const monthDiv = document.createElement('div');
+    monthDiv.className = 'month';
+    const title = document.createElement('div');
+    title.className = 'month-title';
+    title.textContent = MONTH_NAMES[month] + ' ' + year;
+    monthDiv.appendChild(title);
+
+    const grid = document.createElement('div');
+    grid.className = 'month-grid' + (showWeekNumbers ? ' with-weeks' : '');
+
+    if (showWeekNumbers) { const wh = document.createElement('div'); wh.className = 'weekday-header'; grid.appendChild(wh); }
+    WEEKDAY_NAMES.forEach((w, idx) => {
+      const wh = document.createElement('div');
+      wh.className = 'weekday-header'; wh.textContent = w;
+      if (idx >= 5) wh.style.color = 'var(--weekend-text)';
+      grid.appendChild(wh);
+    });
+
+    const firstDay = new Date(Date.UTC(year, month, 1));
+    const lastDay = new Date(Date.UTC(year, month + 1, 0));
+    const firstDow = firstDay.getUTCDay();
+    const offset = (firstDow + 6) % 7;
+    const totalDays = lastDay.getUTCDate();
+    const totalCells = Math.ceil((offset + totalDays) / 7) * 7;
+
+    for (let row = 0; row < totalCells / 7; row++) {
+      if (showWeekNumbers) {
+        const weekStartIdx = row * 7;
+        let firstDateInWeek = null;
+        for (let i = 0; i < 7; i++) {
+          const dayNum = weekStartIdx + i - offset + 1;
+          if (dayNum >= 1 && dayNum <= totalDays) { firstDateInWeek = new Date(Date.UTC(year, month, dayNum)); break; }
+        }
+        const wc = document.createElement('div'); wc.className = 'week-number';
+        if (firstDateInWeek) {
+          const dow = (firstDateInWeek.getUTCDay() + 6) % 7;
+          const monday = addDays(firstDateInWeek, -dow);
+          wc.textContent = getISOWeek(monday);
+        }
+        grid.appendChild(wc);
+      }
+      for (let i = 0; i < 7; i++) {
+        const cellIdx = row * 7 + i;
+        const dayNum = cellIdx - offset + 1;
+        const cell = document.createElement('div');
+        cell.className = 'day-cell';
+        if (dayNum < 1 || dayNum > totalDays) {
+          cell.classList.add('empty');
+        } else {
+          const dateStr = toStr(new Date(Date.UTC(year, month, dayNum)));
+          cell.textContent = dayNum;
+          if (!isWorkingDay(dateStr)) cell.classList.add('non-working');
+          if (isHolidayWeekday(dateStr)) cell.classList.add('holiday');
+          if (dateStr === todayStr) cell.classList.add('today');
+          if (effS && effE && dateStr >= effS && dateStr <= effE) {
+            cell.classList.add('in-range');
+            if (dateStr === effS) cell.classList.add('range-start');
+            if (dateStr === effE) cell.classList.add('range-end');
+          }
+          cell.addEventListener('click', () => onCalendarClick(dateStr));
+        }
+        grid.appendChild(cell);
+      }
+    }
+    monthDiv.appendChild(grid);
+    container.appendChild(monthDiv);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
